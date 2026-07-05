@@ -286,3 +286,22 @@ rtk python3 validate_breakout.py
 
 **สรุป:** เป้า "ปิดทุกไม้กำไรไม่ stopout" = พนันว่าราคาไม่วิ่งสวนเกิน kill$ ก่อน target — บนทองจริง kill$ ของคอนฟิกกำไร < การเคลื่อนไหวปกติของทอง = **ระเบิดเวลา** ยังไม่ระเบิดแค่เพราะ sample ไม่เจอ
 ถ้าจะเล่นจริง: cap levels เสมอ, mult≤1.5, step $20-30, **ใส่ basket hard-SL** (ทิ้งคำว่า "ไม่มี stopout") และใช้เงินก้อนเล็ก ไม่ใช่ทั้ง $100k
+
+## ✅ Production: Multi-position + size-decay (จูนแล้ว + OOS ผ่าน)
+ไฟล์: `backtest_multi.py` (reference), `mt5/ea_breakout_htf.mq5` (auto-trade EA)
+**Locked config:** Breakout 1H, LOOKBACK=20, RR=2.5, SL=1%, MAX_OPEN=3, SIZE_DECAY=0.4, cost 0.05%/ข้าง
+- full-sample 2022-2026: PF 1.40, ret +10.0%, maxDD -1.3%, ret/DD 8.0
+- OOS 2025-2026: PF 1.27 (edge รอด) ✅
+- by-rank: ไม้#0 (เต็มไซซ์) ทำเงินหลัก, ไม้#1 (0.4x) เสริม, ไม้#2 (0.16x) แทบไม่ช่วย ($31)
+  → cap 2 ก็เกือบเท่า cap 3 ถ้าอยากลดความซับซ้อน
+
+**บทเรียนคันโยก size vs SL:** ปรับ **ขนาดไม้** ตาม rank (anti-martingale) = เวิร์ก /
+ปรับ **SL แคบลง** ตาม rank = พัง (breakout SL แคบโดน whipsaw)
+
+**EA ใช้งาน:** วาง `ea_breakout_htf.mq5` ใน MQL5/Experts → compile → ลากใส่ชาร์ต XAUUSD **H1**
+- inputs: MaxOpen(3), SizeDecay(0.4), BaseLot(0.10), RR(2.5), SLpct(1.0) — ตั้ง MaxOpen=1 = flat-only
+- ⚠️ ต้อง **demo/paper ก่อน** + เช็คสเปรดจริง broker
+
+**สรุปตัวเลือก production (เลือกได้):**
+- flat-only (MaxOpen=1): PF 1.55, ret/DD 11.9 — risk-adjusted ดีสุด เรียบง่ายสุด
+- multi cap3+decay0.4: PF 1.40, ret/DD 8.0, เทรด ×2.7 — ถี่ขึ้นมาก DD แทบไม่เพิ่ม
