@@ -1,0 +1,9 @@
+strategy,trades,win_rate_%,avg_RR,profit_factor,expectancy_$,total_return_%,max_DD_%,final_equity_$
+C) Breakout20 2R [no filter],957,38.7,1.42,0.89,-0.8,-7.7,-8.2,9243.0
+C) Breakout20 2R [ADX>25],883,36.9,1.42,0.83,-1.32,-11.7,-13.3,8831.0
+D) FVG 2R [no filter],1000,36.1,1.42,0.8,-1.57,-15.7,-16.0,8434.0
+D) FVG 2R [ADX>25],961,36.1,1.42,0.8,-1.57,-15.1,-15.8,8513.0
+E) SMC 2R [no filter],919,35.1,1.42,0.77,-1.86,-17.1,-17.1,8306.0
+E) SMC 2R [ADX>25],819,35.8,1.42,0.79,-1.67,-13.7,-13.9,8634.0
+B) EMA-Pullback 2R [no filter],793,34.9,1.42,0.76,-1.92,-15.2,-15.7,8496.0
+B) EMA-Pullback 2R [ADX>25],0,,,,,,,
