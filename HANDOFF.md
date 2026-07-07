@@ -345,3 +345,28 @@ rtk python3 validate_breakout.py
    — ทำระหว่าง paper trade, ผูกกับงานค้าง "เช็ค spread broker"
 5. **`validate_any.py`** — รวม battery (out-of-time ข้าม regime + robustness grid + cost stress + short mirror
    + intrabar) เป็น gate มาตรฐานรับ signal function — กลยุทธ์ใหม่ทุกตัวต้องผ่านด่านเดียวกัน
+
+## 🧪 Batch test 4 แนวทางใหม่ (2026-07-07) — ไม่มีตัวไหนผ่าน out-of-time
+เทสบน 3 ช่วง: 12-22 (unseen) / 20-25 / 22-26, cost 0.03%/ข้าง, SL-first, ตัวเลข = PF
+
+| กลยุทธ์ | 12-22 | 20-25 | 22-26 | verdict |
+|---|---|---|---|---|
+| **A) Session breakout** (quiet-8h range, data-driven session detect) | 0.90-0.96 | 0.78-0.81 | 0.98-1.05 | ❌ ตายทุก variant (rr/window) |
+| **B) Exit variants บน Breakout lb20:** fixed RR2.5 (baseline) | 1.00 | — | 1.29 | ✅ robust สุด |
+| — breakeven@1R | 0.85 | — | 1.31 | ❌ โดน wick ออกก่อนใน 12-22 |
+| — ATR3 trailing | **0.62** | — | 0.87 | ❌ พังยับ |
+| — partial 50%@1.5R | 0.86 | — | 1.58 | ❌ สวยเฉพาะ regime ปัจจุบัน |
+| **C) Donchian55 1H** | 0.97 | 1.04 | 1.57 | ❌ ไม่ robust เท่า lb20 |
+| — Donchian20 4H | 0.96 | 1.11 | 1.40 | ❌ เส้นเดียวกัน |
+| — EMA50/200 cross 4H | 0.71 | 1.73 | 3.11 | ❌ regime-dependent สุดขั้ว |
+| **D) BB+RSI reversion** (แคนดิเดตเก่า #2) | 0.68 | 0.72 | 0.69 | ❌ WR 55% แต่เจ๊ง — win-rate trap ซ้ำ |
+| — VWAP reversion (แคนดิเดตเก่า #4) | 0.73 | 0.70 | 0.96 | ❌ ปิด loop แล้ว |
+
+**ข้อสรุป:**
+- **Breakout lb20 + fixed RR2.5 ยังเป็นแชมป์** — ไม่มี exit ไหนที่ปรับแล้วดีขึ้นแบบข้าม regime
+  (สอดคล้องบทเรียนเดิม: แตะ SL/exit ของ breakout = พัง)
+- แนว trend ที่ "ดูดีตอนนี้" (EMA cross PF 3.11, partial 1.58) คือกับดัก regime ขาขึ้นทอง 2022-26 เหมือน dip
+- reversion family ตายครบทุกตัวแล้ว (MeanRev, MeanRev+SL, BB+RSI, VWAP, dip) — เลิกขุดแนวนี้ได้
+- ⚠️ engine ที่ใช้เทียบใน batch นี้เป็นตัว lightweight (baseline lb20 ได้ 1.00 บน 12-22
+  ต่ำกว่า validate_breakout.py ที่ได้ 1.12 — คนละ cost/entry-overlap) → ใช้เทียบ **ระหว่าง variant** ได้
+  แต่ตัวเลขสัมบูรณ์ให้ยึด validate_breakout.py
