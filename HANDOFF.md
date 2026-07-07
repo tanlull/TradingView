@@ -330,7 +330,12 @@ rtk python3 validate_breakout.py
 ตัวตัดสินจริงคือ out-of-time ข้าม regime. ย่อลึก 1.5-2% ยิ่งแย่ (ย่อลึกในขาขึ้น = เทรนด์กำลังพัง)
 
 ## 🔧 งานปรับปรุงที่ระบุไว้ (2026-07-07, เรียงตามความสำคัญ)
-1. **git init + commit** — โฟลเดอร์ยังไม่เป็น repo, locked params/HANDOFF ไม่มี version control (แก้ 2 นาที)
+1. ~~git init + commit~~ ✅ **ปิดแล้ว 2026-07-07** — เป็น repo แล้ว push ขึ้น `github.com/tanlull/TradingView` (main)
+   note เดิมใน Codex pass 2026-07-05 ที่ว่า "ไม่ใช่ git repo" = **หมดอายุแล้ว**
+   ⚠️ 2 จุดต้องระวัง:
+   - commit message ควรสื่อความ (ตอนนี้มี "test"/"commit" — ย้อนหาไม่ได้)
+   - `data/XAUUSD_1m_MT5_export.csv` **83MB ใกล้เพดาน GitHub 100MB/ไฟล์** — export 1M รอบหน้าไฟล์จะโตเกิน
+     → ก่อน push ครั้งหน้า: ใช้ git-lfs หรือ gitignore ไฟล์ data ใหญ่ (วิธี export ซ้ำมีจดไว้ใน HANDOFF แล้ว)
 2. **Validate multi-position config บน 2012-2022 unseen** — MAX_OPEN=3/SIZE_DECAY=0.4 (PF 1.40)
    จูนบน 2022-2026 + OOS แค่ 2025-2026 = ด่านเดียวกับที่ dip เพิ่งสอบตก ต้องผ่านก่อนเชื่อ
    (flat-only ผ่าน 2012-2022 แล้ว ตัว decay overlay ยังไม่เคย)
