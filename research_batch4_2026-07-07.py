@@ -428,3 +428,70 @@ for name in ['12-22','20-25','22-26']:
     for lab,mult,cap in [('baseline',1.0,0),('winx1.5 cap3',1.5,3),('winx2 cap3',2.0,3),('winx1.25 cap5',1.25,5)]:
         pf,ret,dd,rdd=streak_sim(r,mult,cap)
         print(f"   {lab:14s}: PF {pf:4.2f} ret {ret:+7.1f}% DD {dd:6.1f}% ret/DD {rdd:5.1f}")
+
+# ---------- I) equity-curve anti-martingale ----------
+def ec_sim(rets, scheme, base=0.01):
+    # shadow equity = flat-sized strategy equity (decision source, no feedback)
+    R=np.array(rets)/0.01
+    shadow=np.cumprod(1+base*R)
+    sma=pd.Series(shadow).rolling(10).mean().values
+    peak=np.maximum.accumulate(shadow)
+    ddv=shadow/peak-1
+    eq=1.0; pk=1.0; mdd=0.0; gp=0; gl=0
+    for i,r in enumerate(rets):
+        if scheme=='baseline': w=1.0
+        elif scheme=='ecma':   # below own 10-trade MA -> half size
+            w=0.5 if (i>0 and not np.isnan(sma[i-1]) and shadow[i-1]<sma[i-1]) else 1.0
+        elif scheme=='ecma_skip':
+            w=0.0 if (i>0 and not np.isnan(sma[i-1]) and shadow[i-1]<sma[i-1]) else 1.0
+        elif scheme=='ddscale': # scale by own drawdown depth
+            d=ddv[i-1] if i>0 else 0
+            w=1.0 if d>-0.05 else (0.5 if d>-0.15 else 0.25)
+        elif scheme=='INVERSE': # add size in drawdown (loss-recovery style, control)
+            d=ddv[i-1] if i>0 else 0
+            w=1.0 if d>-0.05 else 1.5
+        x=w*(r/0.01)*base
+        eq*=(1+x); pk=max(pk,eq); mdd=min(mdd,eq/pk-1)
+        y=w*r
+        gp+= y if y>0 else 0; gl+= -y if y<=0 else 0
+    pf=gp/gl if gl>0 else 99
+    return pf,(eq-1)*100,mdd*100,((eq-1)/-(mdd) if mdd<0 else 99)
+
+print("\n=== I) equity-curve sizing (Breakout lb20, shadow-equity decisions) ===")
+for name in ['12-22','20-25','22-26']:
+    tr=breakout_trades_ext(DFS[name])
+    r=[x for x,_ in tr]
+    print(f"{name}:")
+    for s in ['baseline','ecma','ecma_skip','ddscale','INVERSE']:
+        pf,ret,dd,rdd=ec_sim(r,s)
+        print(f"   {s:10s}: PF {pf:4.2f} ret {ret:+7.1f}% DD {dd:6.1f}% ret/DD {rdd:5.1f}")
+
+# robustness: EC-MA window sweep
+def ec_sim_w(rets, win, base=0.01):
+    R=np.array(rets)/0.01
+    shadow=np.cumprod(1+base*R)
+    sma=pd.Series(shadow).rolling(win).mean().values
+    eq=1.0; pk=1.0; mdd=0.0; gp=0; gl=0
+    for i,r in enumerate(rets):
+        w=0.5 if (i>0 and not np.isnan(sma[i-1]) and shadow[i-1]<sma[i-1]) else 1.0
+        eq*=(1+w*(r/0.01)*base); pk=max(pk,eq); mdd=min(mdd,eq/pk-1)
+        y=w*r; gp+= y if y>0 else 0; gl+= -y if y<=0 else 0
+    pf=gp/gl if gl>0 else 99
+    return pf,(eq-1)*100,mdd*100
+
+print("\n--- EC-MA window robustness (PF / DD) ---")
+print(f"{'win':>4s} | {'12-22':>16s} | {'20-25':>16s} | {'22-26':>16s}")
+for win in [5,10,20,30,50]:
+    row=[]
+    for name in ['12-22','20-25','22-26']:
+        tr=breakout_trades_ext(DFS[name]); r=[x for x,_ in tr]
+        pf,ret,dd=ec_sim_w(r,win)
+        row.append(f"PF {pf:4.2f} DD {dd:5.1f}")
+    print(f"{win:4d} | " + " | ".join(row))
+# baseline reference
+row=[]
+for name in ['12-22','20-25','22-26']:
+    tr=breakout_trades_ext(DFS[name]); r=[x for x,_ in tr]
+    pf,ret,dd,_=ec_sim(r,'baseline')
+    row.append(f"PF {pf:4.2f} DD {dd:5.1f}")
+print(f"base | " + " | ".join(row))

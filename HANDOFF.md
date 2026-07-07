@@ -400,6 +400,19 @@ ext = ระยะจาก SMA200 หน่วย ATR ณ จุด signal, ter
 ผลมั่วข้าม regime (20-25 ดีขึ้น, 22-26 แย่ลง, 12-22 DD บวม -35→-69%)
 **นับรวม: 12/12 variants แพ้ baseline — ปิดหัวข้อ "ปรุง Breakout" อย่างเป็นทางการ**
 
+### I) ✅ Equity-curve anti-martingale (EC-MA filter) — variant แรกที่รอด (13th ที่ลอง)
+กติกา: equity (จาก closed trades ของกลยุทธ์เอง) ต่ำกว่า MA-10 ไม้ → เทรดครึ่ง size, กลับเหนือ → เต็ม
+| | 12-22 | 20-25 | 22-26 |
+|---|---|---|---|
+| DD: base → ecma | -34.8 → **-28.6%** | -18.7 → **-17.9%** | -16.7 → **-11.3%** |
+| PF: base → ecma | 1.00 → 1.01 | 1.07 → 1.08 | 1.29 → 1.31 |
+| ret/DD 22-26 | | | 5.2 → **6.3** |
+- **เป็น DD-reducer (ลด 20-30% relative) ไม่ใช่ profit-booster** — return สัมบูรณ์ลดนิดหน่อยช่วงดี
+- Robust: ทุก window 5-50 ลด DD ครบ 3 ช่วง (15/15 ช่อง), PF ไม่เสีย — ผ่าน battery เดียวกับที่ฆ่า dip
+- กลไก: ไม้แพ้กระจุกใน chop → EC ต่ำกว่า MA = proxy chop → ลดไม้ตรงนั้น = ตรรกะเดียวกับ SIZE_DECAY
+- ⚠️ variant ที่ 13 — multiple-comparison risk มีจริง ผล modest ต้องยืนยันใน paper trade
+- ต่อยอด: เพิ่ม input `InpEcmaFilter` ใน ea_breakout_htf.mq5 (track own equity, MA10, halve lot) + รัน tester ซ้ำ
+
 ### ✅ ผล Strategy Tester ของโบ้เอง (2026 YTD, AGGRESSIVE, real ticks, History Quality 100%)
 Net +$27,447 บน $10k / PF 1.51 / Sharpe 3.32 / 278 trades / WR 38.1% / Equity DD relative **-31.8%**
 consecutive: ชนะ 14 ($9.6k) แพ้ 14 (-$3.3k) | short win 43.2% > long 34.4% (เก็บขาลง มี.ค. 2026 ได้จริง)
