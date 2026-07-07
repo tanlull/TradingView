@@ -341,8 +341,11 @@ rtk python3 validate_breakout.py
    (flat-only ผ่าน 2012-2022 แล้ว ตัว decay overlay ยังไม่เคย)
 3. **Parity gate สำหรับ MQL5 EA** — `ea_breakout_htf.mq5` ไม่เคยเทียบสัญญาณกับ Python
    (มีแค่ .py↔.mjs) ให้ EA log สัญญาณเป็น CSV จาก Strategy Tester แล้วรัน parity — ต้องเสร็จก่อน paper trade
-4. **Cost model จริง** — วัด spread demo รายชั่วโมง (rollover ~23:00-01:00 ถ่างแรง) + เทส time-of-day filter
-   — ทำระหว่าง paper trade, ผูกกับงานค้าง "เช็ค spread broker"
+4. **Cost model จริง** — ✅ **ปิดเกือบหมด 2026-07-07**: broker จริงของโบ้ spread XAUUSD ≈ **$0.35** (35 points)
+   + มี rebate ทุก lot → ที่ราคาทอง $4,175 = **0.0042%/ข้าง** ต่ำกว่า assumption backtest (0.05%) **12 เท่า**
+   รันด้วย signal_breakout_htf.py จริงบน 2022-2026: PF 1.553 (@0.05%) → **1.759 (@ต้นทุนจริง)**, +17.0%, DD -0.9%
+   เหลือปิดสนิท: log spread จริง ณ จังหวะเข้าไม้ตอน paper trade (breakout เข้าตอนราคาวิ่ง = spread อาจถ่าง
+   แต่ต่อให้ถ่าง 5 เท่า = 0.02%/ข้าง ยังต่ำกว่า assumption เดิม) + จดตัวเลข rebate/lot
 5. **`validate_any.py`** — รวม battery (out-of-time ข้าม regime + robustness grid + cost stress + short mirror
    + intrabar) เป็น gate มาตรฐานรับ signal function — กลยุทธ์ใหม่ทุกตัวต้องผ่านด่านเดียวกัน
 
