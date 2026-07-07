@@ -370,3 +370,23 @@ rtk python3 validate_breakout.py
 - ⚠️ engine ที่ใช้เทียบใน batch นี้เป็นตัว lightweight (baseline lb20 ได้ 1.00 บน 12-22
   ต่ำกว่า validate_breakout.py ที่ได้ 1.12 — คนละ cost/entry-overlap) → ใช้เทียบ **ระหว่าง variant** ได้
   แต่ตัวเลขสัมบูรณ์ให้ยึด validate_breakout.py
+
+### E) Per-trade martingale บน BB+RSI (WR 55%) — 💥 ตายทุกแบบ
+โบ้ถาม: WR 55% + มี TP/SL ทำ martingale ทีละไม้ได้ไหม → **ไม่ได้**
+flat ก็ขาดทุนอยู่แล้ว (expectancy ลบ: ชนะ ~0.5R แพ้ 1R), martingale = size × expectancy ลบ = เจ๊งเร็วขึ้น
+x2 no-cap RUINED 2/3 ช่วง, x1.5 RUINED 22-26 (worst streak **13 ไม้** ทั้งที่ WR 51-55%)
+→ ตอกย้ำ: WR คุม streak ไม่ได้, martingale แก้ expectancy ลบไม่ได้ (บทเรียนที่ 3 รอบแล้ว — พอได้แล้ว)
+
+### F/G) Extension-priority sizing บน Breakout lb20 — ทั้งสองทิศไม่ผ่าน
+สมมติฐานโบ้: "break มาไกลใกล้กลับตัว → ลด priority" / แล้วลองกลับทิศ "เพิ่ม priority" ด้วย
+ext = ระยะจาก SMA200 หน่วย ATR ณ จุด signal, tercile analysis (ไม่ต้องเลือก threshold):
+| ช่วง | avgR fresh | avgR extended |
+|---|---|---|
+| 12-22 | -0.028 | -0.010 |
+| 20-25 | +0.052 | +0.052 (เท่ากันเป๊ะ) |
+| 22-26 | +0.096 | **+0.252** |
+- "ไกล = ใกล้กลับตัว" **ผิด** — extended ไม่แย่กว่า fresh เลย (momentum persistence)
+- ลด size ตอน extended: ตัดไม้ดีทิ้ง กำไรหาย DD ไม่ลด / เพิ่ม size ตอน extended: ดีเฉพาะ 22-26
+  (ret/DD 5.2→6.0) แต่ 12-22 DD หนักขึ้น -34.8→-41.1% = regime bet ไม่ใช่ edge
+- **สรุปรวมวันนี้: exit 3 แบบ + priority 2 ทิศ + martingale — ทุกการแต่งเติมแพ้ baseline ข้าม regime
+  → Breakout lb20 + fixed RR2.5 + size คงที่ = final answer อย่าแต่งเพิ่ม ไปโฟกัส spread จริง + paper trade**
