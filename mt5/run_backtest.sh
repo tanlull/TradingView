@@ -16,9 +16,12 @@
 # ---------------------------------------------------------------------------
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"          # .../TradingView/mt5
-EA_SRC="$HERE/ea_breakout_htf.mq5"
 # use the real-ticks (Model=4) config the Codex skill generated; override with $1
 INI="${1:-$HERE/tester_ea_breakout_htf_balanced_realticks.ini}"
+# EA name (no extension); override with $2 — e.g. ea_breakout_htf_ecma
+EA_NAME="${2:-ea_breakout_htf}"
+EA_SRC="$HERE/$EA_NAME.mq5"
+[ -f "$EA_SRC" ] || { echo "!! EA source not found: $EA_SRC"; exit 1; }
 
 echo "==> locating MT5 (Wine/CrossOver) ..."
 CANDIDATES=(
@@ -57,8 +60,10 @@ mkdir -p "$MQL5/Experts"
 cp "$EA_SRC" "$MQL5/Experts/"
 
 echo "==> compiling (metaeditor64.exe /compile) ..."
-"$WINE" "$MT5DIR/metaeditor64.exe" /compile:"$MQL5/Experts/ea_breakout_htf.mq5" /log || true
-echo "    (check MQL5/Experts/ea_breakout_htf.log for errors; .ex5 = success)"
+"$WINE" "$MT5DIR/metaeditor64.exe" /compile:"$MQL5/Experts/$EA_NAME.mq5" /log || true
+echo "    (check MQL5/Experts/$EA_NAME.log for errors; .ex5 = success)"
+# keep a copy of the .ex5 next to the repo source for versioning
+[ -f "$MQL5/Experts/$EA_NAME.ex5" ] && cp "$MQL5/Experts/$EA_NAME.ex5" "$HERE/" && echo "    copied $EA_NAME.ex5 back to repo mt5/"
 
 echo "==> running Strategy Tester (Model=4 real ticks) ..."
 cp "$INI" "$MT5DIR/strategy_tester.ini"
@@ -67,3 +72,4 @@ cp "$INI" "$MT5DIR/strategy_tester.ini"
 echo "==> done. HTML report is named per the .ini 'Report=' line (in $MT5DIR)."
 echo "    เทียบตัวเลขกับ backtest_multi.py (Balanced ควรได้ ~PF 1.40 / DD ~-1.3%)"
 echo "    เปลี่ยน preset: bash run_backtest.sh tester_ea_breakout_htf_aggressive_realticks.ini"
+echo "    EA ตัว EC-MA:   bash run_backtest.sh mt5/tester_ea_breakout_htf_ecma_balanced_realticks.ini ea_breakout_htf_ecma"
