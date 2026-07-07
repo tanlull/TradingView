@@ -76,5 +76,6 @@ signals `data/XAUUSD_1H_MT5_export_20220408_20260703.csv`
 - ข้อมูลที่มี: `data/XAUUSD_{15m,1H,4H}_real.csv`, `data/XAUUSD_{15m,1H,4H,5m}_2020_2025.csv`
 - ข้อมูลฟรีในโปรเจกต์ถึงประมาณ ส.ค. 2025
 - MT5 บนเครื่องผู้ใช้เป็น macOS native; ใช้ `mt5/ExportBarsCSV.mq5` เพื่อ export CSV แล้วเลือก timeframe จาก `InpTF`
+- ถ้าต้อง compile/backtest MQ5 EA ด้วย MT5 Strategy Tester บน macOS ให้ใช้ workflow ใน `packages/mq5-macos-backtest-portable/mq5-macos-backtest/SKILL.md`
 - ถ้าแก้ logic ใน Python ต้องแก้ Node twin และรัน parity ทุกครั้ง
 - หลีกเลี่ยง Martingale แบบไม่ cap; ผลทดสอบเดิมชี้ว่าเสี่ยง ruin และไม่แก้ expectancy

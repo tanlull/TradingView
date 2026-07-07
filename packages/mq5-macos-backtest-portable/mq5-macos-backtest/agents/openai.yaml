@@ -1,0 +1,4 @@
+interface:
+  display_name: "MQ5 macOS Backtest"
+  short_description: "Compile and backtest MT5 EAs on macOS"
+  default_prompt: "Use $mq5-macos-backtest to compile an MQ5 EA and run MT5 Strategy Tester reports on macOS."

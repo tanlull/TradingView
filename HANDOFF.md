@@ -305,3 +305,38 @@ rtk python3 validate_breakout.py
 **สรุปตัวเลือก production (เลือกได้):**
 - flat-only (MaxOpen=1): PF 1.55, ret/DD 11.9 — risk-adjusted ดีสุด เรียบง่ายสุด
 - multi cap3+decay0.4: PF 1.40, ret/DD 8.0, เทรด ×2.7 — ถี่ขึ้นมาก DD แทบไม่เพิ่ม
+
+## 🔻 Buy-the-dip investigation (2026-07-07) — VERDICT: FAIL out-of-time
+ไฟล์: `validate_dip.py` (มีสรุปผลใน docstring, รันซ้ำได้)
+คำถามโบ้: "กราฟแกว่ง/ย่อตลอด ใช้ตั้ง martingale ได้ไหม" + "เก็บตอนย่อ work ไหม"
+
+**1) Runs analysis (1H 2022→2026-07):** "ย่อเสมอ" ไม่จริง — ทองเคยวิ่ง **+34% โดยไม่ย่อถึง 3%**
+(จบ 2025-10-17), +13.9% ไม่ย่อ 2%, ฝั่งลง -14.1% ไม่เด้ง 3% (2026-03)
+→ martingale grid sim บนไฟล์เดียวกัน: ต้องมีทุน 50-4,554× base lot ถึงรอด maxDD, ล้างพอร์ตโดยดีไซน์
+(ยืนยันบทเรียนเดิมใน section Grid-Martingale — ไม่ต้องเทสซ้ำอีก)
+
+**2) Buy-the-dip แบบมีวินัย** (close>SMA200 + ย่อ 0.5% จาก 20-bar high, SL 1%, RR 2.5, fill next open):
+| ช่วง | PF (long) | หมายเหตุ |
+|---|---|---|
+| 2022-2026 (จูนตรงนี้) | 1.33 coarse / **1.26 บน 1M intrabar** | +54%, DD -25.6% |
+| 2020-2025 (unseen) | 1.17 | ยังบวก |
+| **2012-2022 (unseen)** | **0.91** (-26.5%, DD -38%) | ❌ FAIL |
+| Robustness grid 2012-2022 | **เขียว 1/16** | ❌ FAIL |
+| Short mirror | PF<1 ทุกช่วง | ❌ |
+
+**สรุป:** edge ของ dip เป็น **regime-dependent** (ได้ผลเฉพาะขาขึ้นทอง 2021+) ไม่ใช่ structural edge
+ต่างจาก Breakout HTF ที่ผ่านทุกช่วง (1.12/1.22/1.25) → **ห้าม promote dip เป็นบอท**
+บทเรียน: sweep บนข้อมูลช่วงเดียวหลอกได้สนิท (PF 1.33 ดูดี, IS/OOS ในช่วงเดียวกันก็ผ่าน) —
+ตัวตัดสินจริงคือ out-of-time ข้าม regime. ย่อลึก 1.5-2% ยิ่งแย่ (ย่อลึกในขาขึ้น = เทรนด์กำลังพัง)
+
+## 🔧 งานปรับปรุงที่ระบุไว้ (2026-07-07, เรียงตามความสำคัญ)
+1. **git init + commit** — โฟลเดอร์ยังไม่เป็น repo, locked params/HANDOFF ไม่มี version control (แก้ 2 นาที)
+2. **Validate multi-position config บน 2012-2022 unseen** — MAX_OPEN=3/SIZE_DECAY=0.4 (PF 1.40)
+   จูนบน 2022-2026 + OOS แค่ 2025-2026 = ด่านเดียวกับที่ dip เพิ่งสอบตก ต้องผ่านก่อนเชื่อ
+   (flat-only ผ่าน 2012-2022 แล้ว ตัว decay overlay ยังไม่เคย)
+3. **Parity gate สำหรับ MQL5 EA** — `ea_breakout_htf.mq5` ไม่เคยเทียบสัญญาณกับ Python
+   (มีแค่ .py↔.mjs) ให้ EA log สัญญาณเป็น CSV จาก Strategy Tester แล้วรัน parity — ต้องเสร็จก่อน paper trade
+4. **Cost model จริง** — วัด spread demo รายชั่วโมง (rollover ~23:00-01:00 ถ่างแรง) + เทส time-of-day filter
+   — ทำระหว่าง paper trade, ผูกกับงานค้าง "เช็ค spread broker"
+5. **`validate_any.py`** — รวม battery (out-of-time ข้าม regime + robustness grid + cost stress + short mirror
+   + intrabar) เป็น gate มาตรฐานรับ signal function — กลยุทธ์ใหม่ทุกตัวต้องผ่านด่านเดียวกัน

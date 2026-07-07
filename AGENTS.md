@@ -21,6 +21,7 @@ Use `HANDOFF.md` as the long memory. Keep this file short and operational.
 - This folder may not be a git repo; check before assuming history or clean status.
 - Avoid editing generated data/images unless explicitly asked.
 - For code changes, preserve parity between Python research code and Node bot code.
+- For macOS MT5/MQL5 compile or Strategy Tester work, use the portable skill instructions at `packages/mq5-macos-backtest-portable/mq5-macos-backtest/SKILL.md`.
 
 ## Current Validated Candidate
 
