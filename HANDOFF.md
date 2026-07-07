@@ -393,3 +393,16 @@ ext = ระยะจาก SMA200 หน่วย ATR ณ จุด signal, ter
   (ret/DD 5.2→6.0) แต่ 12-22 DD หนักขึ้น -34.8→-41.1% = regime bet ไม่ใช่ edge
 - **สรุปรวมวันนี้: exit 3 แบบ + priority 2 ทิศ + martingale — ทุกการแต่งเติมแพ้ baseline ข้าม regime
   → Breakout lb20 + fixed RR2.5 + size คงที่ = final answer อย่าแต่งเพิ่ม ไปโฟกัส spread จริง + paper trade**
+
+### H) Win-streak anti-martingale (เพิ่ม size หลังชนะ) — ไม่ผ่านเช่นกัน
+ไม่มี hot-hand: P(win|เพิ่งชนะ) ≈ P(win|เพิ่งแพ้) และสองช่วงหลัง**กลับด้าน** (avgR หลังแพ้ +0.07/+0.25
+ดีกว่าหลังชนะ +0.03/+0.09 — แพ้กระจุกใน chop แล้วไม้ถัดมา breakout จริง) → sim winx1.5-x2:
+ผลมั่วข้าม regime (20-25 ดีขึ้น, 22-26 แย่ลง, 12-22 DD บวม -35→-69%)
+**นับรวม: 12/12 variants แพ้ baseline — ปิดหัวข้อ "ปรุง Breakout" อย่างเป็นทางการ**
+
+### ✅ ผล Strategy Tester ของโบ้เอง (2026 YTD, AGGRESSIVE, real ticks, History Quality 100%)
+Net +$27,447 บน $10k / PF 1.51 / Sharpe 3.32 / 278 trades / WR 38.1% / Equity DD relative **-31.8%**
+consecutive: ชนะ 14 ($9.6k) แพ้ 14 (-$3.3k) | short win 43.2% > long 34.4% (เก็บขาลง มี.ค. 2026 ได้จริง)
+ตีความ: ตรงย่านโมเดล (PF 1.38-1.55) ✅ แต่เป็น 6 เดือนใน regime ดีสุด — อย่า extrapolate +274%
+DD -32% คือราคาจริงของ AGGRESSIVE (BaseLot 0.10 @ทอง $4k = ~4%/ไม้แรก, ตะกร้า ~13%)
+→ ถ้ารับไม่ได้: BALANCED หรือ BaseLot 0.05

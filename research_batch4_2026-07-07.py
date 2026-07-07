@@ -392,3 +392,39 @@ for name in ['12-22','20-25','22-26']:
     for lab,f in boost.items():
         pf,ret,dd,rdd=eval_sizing(tr,f)
         print(f"   {lab:30s}: PF {pf:4.2f} ret {ret:+7.1f}% DD {dd:6.1f}% ret/DD {rdd:5.1f}")
+
+# ---------- H) win-streak anti-martingale on Breakout lb20 ----------
+print("\n=== H) consecutive-win exploitation ===")
+for name in ['12-22','20-25','22-26']:
+    tr=breakout_trades_ext(DFS[name])
+    r=np.array([x for x,_ in tr])
+    win=(r>0).astype(int)
+    # conditional: P(win | prev win) vs P(win | prev loss), avgR conditional
+    pw_w=win[1:][win[:-1]==1].mean()*100
+    pw_l=win[1:][win[:-1]==0].mean()*100
+    aR_w=r[1:][win[:-1]==1].mean()/0.01
+    aR_l=r[1:][win[:-1]==0].mean()/0.01
+    # streak of 2 wins
+    w2=(win[:-2]==1)&(win[1:-1]==1)
+    pw_ww=win[2:][w2].mean()*100 if w2.sum()>20 else float('nan')
+    print(f"{name}: P(win|prevW) {pw_w:.1f}% vs P(win|prevL) {pw_l:.1f}% | avgR afterW {aR_w:+.3f} vs afterL {aR_l:+.3f} | P(win|WW) {pw_ww:.1f}%")
+
+def streak_sim(rets, mult, cap, base=0.01):
+    eq=1.0; pk=1.0; mdd=0.0; sz=1.0; st=0; gp=0; gl=0
+    for r in rets:
+        R=r/0.01
+        eq*=(1+base*sz*R); pk=max(pk,eq); mdd=min(mdd,eq/pk-1)
+        x=sz*r
+        gp+= x if x>0 else 0; gl+= -x if x<=0 else 0
+        if r>0: st+=1; sz=min(mult**st, mult**cap)
+        else: st=0; sz=1.0
+    pf=gp/gl if gl>0 else 99
+    return pf,(eq-1)*100,mdd*100,((eq-1)/-(mdd) if mdd<0 else 99)
+
+for name in ['12-22','20-25','22-26']:
+    tr=breakout_trades_ext(DFS[name])
+    r=np.array([x for x,_ in tr])
+    print(f"{name}:")
+    for lab,mult,cap in [('baseline',1.0,0),('winx1.5 cap3',1.5,3),('winx2 cap3',2.0,3),('winx1.25 cap5',1.25,5)]:
+        pf,ret,dd,rdd=streak_sim(r,mult,cap)
+        print(f"   {lab:14s}: PF {pf:4.2f} ret {ret:+7.1f}% DD {dd:6.1f}% ret/DD {rdd:5.1f}")
