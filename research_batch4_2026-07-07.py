@@ -648,3 +648,79 @@ print("=== J3) 1M intrabar replay, trend-grid close-on-flip, 22-26, cost จร�
 for mult in [2.0,1.5]:
     eq,dd,lv=grid_trend_1m(mult=mult)
     print(f"x{mult}: profit {eq:+7.0f}%ofBase maxDD {dd:6.0f}% maxLv {lv} | coarse เทียบ: x2 +683/-181, x1.5 +390/-65")
+
+# ---------- K) trend indicator comparison ----------
+def psar(h,l,af0=0.02,afmax=0.2):
+    n=len(h); tr=np.zeros(n,dtype=int)
+    up=True; af=af0; ep=h[0]; sar=l[0]
+    for i in range(1,n):
+        sar=sar+af*(ep-sar)
+        if up:
+            sar=min(sar,l[i-1],l[i-2] if i>1 else l[i-1])
+            if l[i]<sar: up=False; sar=ep; ep=l[i]; af=af0
+            else:
+                if h[i]>ep: ep=h[i]; af=min(af+af0,afmax)
+        else:
+            sar=max(sar,h[i-1],h[i-2] if i>1 else h[i-1])
+            if h[i]>sar: up=True; sar=ep; ep=h[i]; af=af0
+            else:
+                if l[i]<ep: ep=l[i]; af=min(af+af0,afmax)
+        tr[i]=1 if up else -1
+    return tr
+
+def trends(df):
+    c=df['close'].values; h=df['high'].values; l=df['low'].values
+    out={}
+    out['SMA200']=np.where(c>pd.Series(c).rolling(200).mean().values,1,-1)
+    out['EMA200']=np.where(c>pd.Series(c).ewm(span=200).mean().values,1,-1)
+    out['EMA50'] =np.where(c>pd.Series(c).ewm(span=50).mean().values,1,-1)
+    out['EMA9']  =np.where(c>pd.Series(c).ewm(span=9).mean().values,1,-1)
+    out['SAR']   =psar(h,l)
+    return out
+
+print("=== K1) trend quality per indicator (1H) ===")
+print(f"{'ind':7s} | {'period':5s} | flips/yr | avg fwd-1H ret ตามทิศ (bp) | %time correct-ish")
+for name in ['12-22','20-25','22-26']:
+    df=DFS[name]; c=df['close'].values
+    fwd=np.zeros(len(c)); fwd[:-1]=c[1:]/c[:-1]-1
+    yrs=(df['time'].iloc[-1]-df['time'].iloc[0]).days/365.25
+    for ind,tr in trends(df).items():
+        v=tr[200:-1]; f=fwd[200:-1]
+        flips=(np.diff(tr[200:])!=0).sum()/yrs
+        align=(f*v)
+        print(f"{ind:7s} | {name:5s} | {flips:7.0f}  | {align.mean()*1e4:+6.2f} | {(align>0).mean()*100:4.1f}%")
+
+def grid_trend3(df, trarr, step=0.01, mult=1.5, tp=0.005, maxlv=15, cost_side=0.0042/100):
+    o,h,l,c=(df[k].values for k in('open','high','low','close'))
+    n=len(c); eq=0.0; peak=0.0; mdd=0.0; lots=[]; prices=[]; side=0
+    def close_basket(px):
+        nonlocal eq,peak
+        eq+=sum(q*(px-p)/p*side for p,q in zip(prices,lots))-sum(lots)*cost_side*2
+        peak=max(peak,eq)
+    for i in range(201,n):
+        trend=trarr[i]
+        if side==0:
+            side=trend; lots=[1.0]; prices=[c[i]]; continue
+        while len(lots)<maxlv:
+            if side==1 and l[i]<=prices[-1]*(1-step): prices.append(prices[-1]*(1-step)); lots.append(lots[-1]*mult)
+            elif side==-1 and h[i]>=prices[-1]*(1+step): prices.append(prices[-1]*(1+step)); lots.append(lots[-1]*mult)
+            else: break
+        L=sum(lots); be=sum(p*q for p,q in zip(prices,lots))/L
+        px=l[i] if side==1 else h[i]
+        u=sum(q*(px-p)/p*side for p,q in zip(prices,lots))-L*cost_side*2
+        mdd=min(mdd,eq+u-peak)
+        tp_px=be*(1+tp) if side==1 else be*(1-tp)
+        if (h[i]>=tp_px) if side==1 else (l[i]<=tp_px):
+            close_basket(tp_px); side=0; lots=[]; prices=[]; continue
+        if trend!=side:
+            close_basket(c[i]); side=0; lots=[]; prices=[]
+    return eq*100,mdd*100
+
+print("\n=== K2) same trend-grid (x1.5, close-on-flip, cost จริง) per indicator ===")
+for name in ['12-22','20-25','22-26']:
+    df=DFS[name]; row=[]
+    for ind,tr in trends(df).items():
+        eq,dd=grid_trend3(df,tr)
+        rdd=eq/abs(dd) if dd<0 else 99
+        row.append(f"{ind}: {eq:+5.0f}%/{dd:5.0f}% ({rdd:4.1f})")
+    print(f"{name}: " + " | ".join(row))
