@@ -336,9 +336,16 @@ rtk python3 validate_breakout.py
    - commit message ควรสื่อความ (ตอนนี้มี "test"/"commit" — ย้อนหาไม่ได้)
    - `data/XAUUSD_1m_MT5_export.csv` **83MB ใกล้เพดาน GitHub 100MB/ไฟล์** — export 1M รอบหน้าไฟล์จะโตเกิน
      → ก่อน push ครั้งหน้า: ใช้ git-lfs หรือ gitignore ไฟล์ data ใหญ่ (วิธี export ซ้ำมีจดไว้ใน HANDOFF แล้ว)
-2. **Validate multi-position config บน 2012-2022 unseen** — MAX_OPEN=3/SIZE_DECAY=0.4 (PF 1.40)
-   จูนบน 2022-2026 + OOS แค่ 2025-2026 = ด่านเดียวกับที่ dip เพิ่งสอบตก ต้องผ่านก่อนเชื่อ
-   (flat-only ผ่าน 2012-2022 แล้ว ตัว decay overlay ยังไม่เคย)
+2. ~~Validate multi-position บน 2012-2022 unseen~~ ✅ **ปิดแล้ว 2026-07-07 — ผลเปลี่ยนคำแนะนำ:**
+   รัน backtest_multi.py บน data/XAUUSD_1H_real.csv (2012-2022 unseen):
+   | preset | PF | ret | ret/DD | verdict |
+   |---|---|---|---|---|
+   | CONSERVATIVE cap1 | **1.16** | +7.5% | 3.2 | ✅ ตัวเดียวที่ robust |
+   | BALANCED cap3 | 1.06 | +2.5% | 1.2 | ⚠️ ผ่านหวุดหวิด, rank#2 ขาดทุน (-$97) |
+   | AGGRESSIVE cap5 | **0.98** | -2.9% | -0.4 | ❌ **FAIL out-of-time** (rank#2/#3 = -$305/-$501) |
+   → **paper trade ให้ใช้ CONSERVATIVE** (ตั้ง InpPreset=PRESET_CONSERVATIVE — default ไฟล์คือ BALANCED)
+   → ผล tester 2026 ของโบ้ (+274% AGGRESSIVE) = regime trap: ไม้ rank ลึกทำเงินเฉพาะเทรนด์แรง
+   sideways ยาวคายคืนหมด — ห้ามใช้ AGGRESSIVE เป็น expectation
 3. **Parity gate สำหรับ MQL5 EA** — `ea_breakout_htf.mq5` ไม่เคยเทียบสัญญาณกับ Python
    (มีแค่ .py↔.mjs) ให้ EA log สัญญาณเป็น CSV จาก Strategy Tester แล้วรัน parity — ต้องเสร็จก่อน paper trade
 4. **Cost model จริง** — ✅ **ปิดเกือบหมด 2026-07-07**: broker จริงของโบ้ spread XAUUSD ≈ **$0.35** (35 points)
