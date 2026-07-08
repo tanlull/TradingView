@@ -413,6 +413,16 @@ ext = ระยะจาก SMA200 หน่วย ATR ณ จุด signal, ter
 - ⚠️ variant ที่ 13 — multiple-comparison risk มีจริง ผล modest ต้องยืนยันใน paper trade
 - ต่อยอด: เพิ่ม input `InpEcmaFilter` ใน ea_breakout_htf.mq5 (track own equity, MA10, halve lot) + รัน tester ซ้ำ
 
+### J) Trend-filtered martingale grid (ไอเดียโบ้: ถัวตามเทรนด์เท่านั้น ห้ามสวน) — เกือบ แต่ไม่รอด 1M
+กติกา: SMA200 กำหนดทิศ, buy-grid เฉพาะขาขึ้น / sell-grid เฉพาะขาลง, ถัว ×mult ทุก step 1%,
+TP ตะกร้าที่ BE+0.5%, **ปิดตะกร้าทันทีเมื่อเทรนด์พลิก** (ตัวนี้คือหัวใจ — hold-thru-flip ตาย DD 1,000x)
+- Coarse 1H (cost จริง): บวกครบ 3 ช่วง, mult ช่วยจริง (DCA control x1.0 แพ้ชัด) — martingale ที่ดีสุดที่เคยเทส
+- **แต่ 1M replay (22-26): DD บวม 5 เท่า** — x2: -181%→**-959%ofBase**, x1.5: -65%→-358%, ret/DD เหลือ 0.5-1.1
+  (ช่วงระหว่างถัวกับ flip-close ราคาแกว่งลึกกว่าที่แท่ง 1H เห็น) + cost-sensitive (ตาย 20-25 ที่ 0.03%/side)
+- Verdict: ❌ แพ้ Breakout (ret/DD 5-12) ทุกมิติ — ไม่มีเหตุผลให้ใช้
+- **บทเรียนใหม่: ระบบ grid = class ที่ coarse backtest หลอกหนักสุด** (breakout coarse→fine หด ~6%
+  แต่ grid DD บวม ~500%) → ข้อเสนอ grid ใด ๆ ต่อจากนี้ ตัดสินด้วย 1M replay เท่านั้น
+
 ### ✅ ผล Strategy Tester ของโบ้เอง (2026 YTD, AGGRESSIVE, real ticks, History Quality 100%)
 Net +$27,447 บน $10k / PF 1.51 / Sharpe 3.32 / 278 trades / WR 38.1% / Equity DD relative **-31.8%**
 consecutive: ชนะ 14 ($9.6k) แพ้ 14 (-$3.3k) | short win 43.2% > long 34.4% (เก็บขาลง มี.ค. 2026 ได้จริง)

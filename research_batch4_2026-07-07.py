@@ -495,3 +495,156 @@ for name in ['12-22','20-25','22-26']:
     pf,ret,dd,_=ec_sim(r,'baseline')
     row.append(f"PF {pf:4.2f} DD {dd:5.1f}")
 print(f"base | " + " | ".join(row))
+
+# ---------- J) TREND-FILTERED martingale grid (never against trend) ----------
+def grid_trend(df, step=0.01, mult=2.0, tp=0.005, maxlv=15, close_on_flip=False, basket_sl=None):
+    """Buy-grid only when close>SMA200 (uptrend), sell-grid only when close<SMA200.
+    Add lot*mult every `step` adverse move. TP basket at breakeven +/- tp.
+    basket_sl: close basket when unrealized <= -basket_sl (% of base notional).
+    Accounting in % of base-lot notional (comparable to earlier counter-trend grid runs)."""
+    o,h,l,c=(df[k].values for k in('open','high','low','close'))
+    sma=pd.Series(c).rolling(200).mean().values
+    n=len(c)
+    eq=0.0; peak=0.0; mdd=0.0
+    lots=[]; prices=[]; side=0  # +1 buy basket, -1 sell basket
+    baskets=0; flips=0; slhits=0; worst_lv=0
+    for i in range(201,n):
+        trend = 1 if c[i]>sma[i] else -1
+        if side==0:
+            side=trend; lots=[1.0]; prices=[c[i]]; baskets+=1
+            continue
+        # add levels on adverse move (with-trend basket, adverse = pullback)
+        while len(lots)<maxlv:
+            if side==1 and l[i] <= prices[-1]*(1-step):
+                prices.append(prices[-1]*(1-step)); lots.append(lots[-1]*mult)
+            elif side==-1 and h[i] >= prices[-1]*(1+step):
+                prices.append(prices[-1]*(1+step)); lots.append(lots[-1]*mult)
+            else: break
+        worst_lv=max(worst_lv,len(lots))
+        L=sum(lots); be=sum(p*q for p,q in zip(prices,lots))/L
+        # unrealized at worst point of bar
+        px = l[i] if side==1 else h[i]
+        u=sum(q*(px-p)/p*side for p,q in zip(prices,lots))
+        mdd=min(mdd, eq+u-peak)
+        # basket SL
+        if basket_sl is not None and u <= -basket_sl:
+            eq+=u; peak=max(peak,eq); slhits+=1; side=0; lots=[]; prices=[]; continue
+        # TP
+        tp_px = be*(1+tp) if side==1 else be*(1-tp)
+        hit = (h[i]>=tp_px) if side==1 else (l[i]<=tp_px)
+        if hit:
+            eq+=sum(q*(tp_px-p)/p*side for p,q in zip(prices,lots))
+            peak=max(peak,eq); side=0; lots=[]; prices=[]; continue
+        # trend flip handling
+        if close_on_flip and trend!=side:
+            px2=c[i]
+            eq+=sum(q*(px2-p)/p*side for p,q in zip(prices,lots))
+            peak=max(peak,eq); flips+=1; side=0; lots=[]; prices=[]
+    return eq*100, mdd*100, worst_lv, baskets, flips, slhits
+
+print("=== J) TREND-FILTERED martingale grid (with-trend only, %% of base-lot notional) ===")
+for name in ['12-22','20-25','22-26']:
+    print(f"{name}:")
+    for lab,kw in [
+        ("x2 step1%% hold-thru-flip", dict(step=0.01,mult=2.0)),
+        ("x2 step1%% close-on-flip",  dict(step=0.01,mult=2.0,close_on_flip=True)),
+        ("x1.5 step2%% close-on-flip",dict(step=0.02,mult=1.5,close_on_flip=True)),
+        ("x2 step1%% flip+basketSL500%%", dict(step=0.01,mult=2.0,close_on_flip=True,basket_sl=5.0)),
+    ]:
+        eq,dd,lv,bk,fl,sl=grid_trend(DFS[name],**kw)
+        need=abs(dd)/100
+        print(f"   {lab:28s}: profit {eq:+9.0f}%% maxDD {dd:9.0f}%% maxLv {lv:2d} baskets {bk} | ต้องมีทุน ~{need:5.1f}x base notional")
+
+# refine J: add cost + mult=1.0 control
+def grid_trend2(df, step=0.01, mult=2.0, tp=0.005, maxlv=15, cost_side=0.0042/100, basket_sl=None):
+    o,h,l,c=(df[k].values for k in('open','high','low','close'))
+    sma=pd.Series(c).rolling(200).mean().values
+    n=len(c); eq=0.0; peak=0.0; mdd=0.0
+    lots=[]; prices=[]; side=0
+    def close_basket(px):
+        nonlocal eq,peak
+        pnl=sum(q*(px-p)/p*side for p,q in zip(prices,lots))
+        pnl-=sum(lots)*cost_side*2
+        eq+=pnl; peak=max(peak,eq)
+    for i in range(201,n):
+        trend = 1 if c[i]>sma[i] else -1
+        if side==0:
+            side=trend; lots=[1.0]; prices=[c[i]]
+            continue
+        while len(lots)<maxlv:
+            if side==1 and l[i] <= prices[-1]*(1-step):
+                prices.append(prices[-1]*(1-step)); lots.append(lots[-1]*mult)
+            elif side==-1 and h[i] >= prices[-1]*(1+step):
+                prices.append(prices[-1]*(1+step)); lots.append(lots[-1]*mult)
+            else: break
+        L=sum(lots); be=sum(p*q for p,q in zip(prices,lots))/L
+        px = l[i] if side==1 else h[i]
+        u=sum(q*(px-p)/p*side for p,q in zip(prices,lots)) - L*cost_side*2
+        mdd=min(mdd, eq+u-peak)
+        if basket_sl is not None and u <= -basket_sl:
+            close_basket(px); side=0; lots=[]; prices=[]; continue
+        tp_px = be*(1+tp) if side==1 else be*(1-tp)
+        if (h[i]>=tp_px) if side==1 else (l[i]<=tp_px):
+            close_basket(tp_px); side=0; lots=[]; prices=[]; continue
+        if trend!=side:
+            close_basket(c[i]); side=0; lots=[]; prices=[]
+    return eq*100, mdd*100
+
+print("=== J2) close-on-flip + COST, vs mult=1.0 control ===")
+for cost,clab in [(0.0042/100,'cost จริง $0.35'),(0.03/100,'cost 0.03%/side')]:
+    print(f"--- {clab} ---")
+    for name in ['12-22','20-25','22-26']:
+        row=[]
+        for mult,mlab in [(2.0,'x2.0'),(1.5,'x1.5'),(1.0,'x1.0 (DCA control)')]:
+            eq,dd=grid_trend2(DFS[name],step=0.01,mult=mult,cost_side=cost)
+            rdd=eq/abs(dd) if dd<0 else 99
+            row.append(f"{mlab}: {eq:+7.0f}% DD {dd:6.0f}% r/DD {rdd:4.1f}")
+        print(f"{name}: " + " | ".join(row))
+
+# ---------- J3) 1M intrabar replay of trend-filtered grid (22-26) ----------
+def grid_trend_1m(mult=1.5, step=0.01, tp=0.005, maxlv=15, cost_side=0.0042/100):
+    H=DFS['22-26']
+    hc=H['close'].values; ht=H['time'].values
+    sma=pd.Series(hc).rolling(200).mean().values
+    M=pd.read_csv('/sessions/youthful-great-bell/mnt/TradingView/data/XAUUSD_1m_MT5_export.csv')
+    M['time']=pd.to_datetime(M['time'],format='%Y.%m.%d %H:%M',utc=True)
+    mo,mh,ml,mc=(M[k].values for k in('open','high','low','close'))
+    mt=M['time'].values
+    # trend per 1m bar = from most recent CLOSED 1H bar
+    idx=np.searchsorted(ht, mt, side='right')-1   # last 1H bar whose open<=t; closed bar = idx-1
+    trend=np.zeros(len(mt),dtype=int)
+    ok=idx>=201
+    tr_h=np.where(hc>sma,1,-1)
+    trend[ok]=tr_h[idx[ok]-1]
+    eq=0.0; peak=0.0; mdd=0.0; lots=[]; prices=[]; side=0; worst_lv=0
+    def close_basket(px):
+        nonlocal eq,peak
+        eq+=sum(q*(px-p)/p*side for p,q in zip(prices,lots))-sum(lots)*cost_side*2
+        peak=max(peak,eq)
+    for i in range(len(mt)):
+        if trend[i]==0: continue
+        if side==0:
+            side=trend[i]; lots=[1.0]; prices=[mc[i]]; continue
+        # within 1m bar: process adds then TP (range at 1m is tiny; ambiguity minimal)
+        while len(lots)<maxlv:
+            if side==1 and ml[i] <= prices[-1]*(1-step):
+                prices.append(prices[-1]*(1-step)); lots.append(lots[-1]*mult)
+            elif side==-1 and mh[i] >= prices[-1]*(1+step):
+                prices.append(prices[-1]*(1+step)); lots.append(lots[-1]*mult)
+            else: break
+        worst_lv=max(worst_lv,len(lots))
+        L=sum(lots); be=sum(p*q for p,q in zip(prices,lots))/L
+        px = ml[i] if side==1 else mh[i]
+        u=sum(q*(px-p)/p*side for p,q in zip(prices,lots))-L*cost_side*2
+        mdd=min(mdd, eq+u-peak)
+        tp_px = be*(1+tp) if side==1 else be*(1-tp)
+        if (mh[i]>=tp_px) if side==1 else (ml[i]<=tp_px):
+            close_basket(tp_px); side=0; lots=[]; prices=[]; continue
+        if trend[i]!=side:
+            close_basket(mc[i]); side=0; lots=[]; prices=[]
+    return eq*100, mdd*100, worst_lv
+
+print("=== J3) 1M intrabar replay, trend-grid close-on-flip, 22-26, cost จริง ===")
+for mult in [2.0,1.5]:
+    eq,dd,lv=grid_trend_1m(mult=mult)
+    print(f"x{mult}: profit {eq:+7.0f}%ofBase maxDD {dd:6.0f}% maxLv {lv} | coarse เทียบ: x2 +683/-181, x1.5 +390/-65")
